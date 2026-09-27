@@ -3,10 +3,10 @@
   "name": "KALO Smart",
   "codeowners": [],
   "config_flow": true,
-  "documentation": "https://github.com/koshaq/ha-kalo-smart",
+  "documentation": "https://github.com/wildy/ha-kalo-smart",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/koshaq/ha-kalo-smart/issues",
+  "issue_tracker": "https://github.com/wildy/ha-kalo-smart/issues",
   "requirements": ["pycognito==2024.5.1"],
   "version": "0.1.0"
 }
