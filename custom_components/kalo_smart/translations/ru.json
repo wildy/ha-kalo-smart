@@ -1,0 +1,66 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "KALO Smart",
+        "description": "Войдите с тем же аккаунтом, что и в приложении KALO Smart.",
+        "data": {
+          "email": "Эл. почта",
+          "password": "Пароль"
+        },
+        "data_description": {
+          "email": "Адрес эл. почты, на который зарегистрирован аккаунт KALO Smart."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Повторная авторизация KALO Smart",
+        "description": "Пароль для {email} больше не принимается. Введите текущий.",
+        "data": {
+          "password": "Пароль"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Не удалось подключиться к сервису KALO Smart.",
+      "invalid_auth": "Неверная почта или пароль.",
+      "no_rooms": "Вход выполнен, но в аккаунте нет комнат с термостатами.",
+      "unknown": "Непредвиденная ошибка."
+    },
+    "abort": {
+      "already_configured": "Этот аккаунт уже настроен.",
+      "reauth_successful": "Повторная авторизация KALO Smart выполнена."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "window_open": {
+        "name": "Окно открыто"
+      }
+    },
+    "sensor": {
+      "target_temperature": {
+        "name": "Целевая температура"
+      },
+      "radiator_status": {
+        "name": "Состояние радиатора",
+        "state": {
+          "off": "Выключен",
+          "lew": "Чуть теплый",
+          "warm": "Теплый",
+          "hot": "Горячий"
+        }
+      }
+    },
+    "switch": {
+      "away": {
+        "name": "Не дома"
+      },
+      "child_lock": {
+        "name": "Блокировка от детей"
+      },
+      "open_window_detection": {
+        "name": "Определение открытого окна"
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+[tool.ruff]
+target-version = "py313"
+line-length = 95
+
+[tool.ruff.lint]
+select = [
+  "E", "F", "W",      # pycodestyle, pyflakes
+  "I",                # import sorting
+  "UP",               # pyupgrade
+  "B",                # bugbear
+  "SIM",              # simplify
+  "ASYNC",            # async pitfalls
+  "D",                # docstrings, as Home Assistant requires
+  "PL",               # pylint
+  "RUF",
+]
+ignore = [
+  "D203",   # conflicts with D211
+  "D213",   # conflicts with D212
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D100", "D103", "PLR2004"]
+"docs/recover-sources.py" = ["D103"]
+# A standalone diagnostic script: lazy imports and bare HTTP codes are fine.
+"scripts/*" = ["D103", "T201", "PLC0415", "PLR2004"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

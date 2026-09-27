@@ -1,0 +1,66 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "KALO Smart",
+        "description": "Sign in with the same account you use in the KALO Smart app.",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        },
+        "data_description": {
+          "email": "The email address your KALO Smart account is registered to."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate KALO Smart",
+        "description": "The password for {email} is no longer accepted. Enter the current one.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach the KALO Smart service.",
+      "invalid_auth": "Invalid email or password.",
+      "no_rooms": "Signed in, but this account has no rooms with thermostats.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This account is already set up.",
+      "reauth_successful": "KALO Smart was re-authenticated successfully."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "window_open": {
+        "name": "Window open"
+      }
+    },
+    "sensor": {
+      "target_temperature": {
+        "name": "Target temperature"
+      },
+      "radiator_status": {
+        "name": "Radiator status",
+        "state": {
+          "off": "Off",
+          "lew": "Lukewarm",
+          "warm": "Warm",
+          "hot": "Hot"
+        }
+      }
+    },
+    "switch": {
+      "away": {
+        "name": "Away"
+      },
+      "child_lock": {
+        "name": "Child lock"
+      },
+      "open_window_detection": {
+        "name": "Open window detection"
+      }
+    }
+  }
+}

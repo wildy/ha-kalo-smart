@@ -1,0 +1,66 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "KALO Smart",
+        "description": "Melden Sie sich mit dem Konto an, das Sie in der KALO Smart App verwenden.",
+        "data": {
+          "email": "E-Mail",
+          "password": "Passwort"
+        },
+        "data_description": {
+          "email": "Die E-Mail-Adresse, mit der Ihr KALO Smart Konto registriert ist."
+        }
+      },
+      "reauth_confirm": {
+        "title": "KALO Smart neu anmelden",
+        "description": "Das Passwort für {email} wird nicht mehr akzeptiert. Bitte geben Sie das aktuelle ein.",
+        "data": {
+          "password": "Passwort"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Der KALO Smart Dienst ist nicht erreichbar.",
+      "invalid_auth": "Ungültige E-Mail-Adresse oder ungültiges Passwort.",
+      "no_rooms": "Anmeldung erfolgreich, aber dieses Konto hat keine Räume mit Thermostaten.",
+      "unknown": "Unerwarteter Fehler."
+    },
+    "abort": {
+      "already_configured": "Dieses Konto ist bereits eingerichtet.",
+      "reauth_successful": "KALO Smart wurde erfolgreich neu angemeldet."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "window_open": {
+        "name": "Fenster offen"
+      }
+    },
+    "sensor": {
+      "target_temperature": {
+        "name": "Zieltemperatur"
+      },
+      "radiator_status": {
+        "name": "Heizkörperstatus",
+        "state": {
+          "off": "Aus",
+          "lew": "Lauwarm",
+          "warm": "Warm",
+          "hot": "Heiß"
+        }
+      }
+    },
+    "switch": {
+      "away": {
+        "name": "Abwesend"
+      },
+      "child_lock": {
+        "name": "Kindersicherung"
+      },
+      "open_window_detection": {
+        "name": "Fenster-offen-Erkennung"
+      }
+    }
+  }
+}

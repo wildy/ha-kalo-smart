@@ -1,0 +1,108 @@
+{
+  "_comment": "Payload shapes taken from the KALO Smart app's own demo-mode mocks (de.kalo.smart 1.7.3), which the app feeds through the same code paths as live responses.",
+  "room_groups": [
+    {
+      "id": "DunderMifflinScranton",
+      "displayName": "Demo Zuhause",
+      "tenancyType": "MAIN_TENANT",
+      "userType": "MAIN_USER",
+      "roomIds": ["1_badezimmer", "2_wohnzimmer", "3_schlafzimmer"],
+      "profile": { "name": "PROFILE_APP_SCHEDULE", "isInSync": true }
+    }
+  ],
+  "room_names": {
+    "DunderMifflinScranton": {
+      "1_badezimmer": "Bad",
+      "2_wohnzimmer": "Wohnzimmer"
+    }
+  },
+  "rooms": [
+    {
+      "id": "1_badezimmer",
+      "roomGroupId": "DunderMifflinScranton",
+      "displayName": "",
+      "floorLevel": "",
+      "usageType": "BATHROOM",
+      "averageTemperature": 22.0,
+      "averageHumidity": 47.0,
+      "maximumTargetTemperature": 22.0,
+      "maximumTemperature": 28,
+      "minimumTemperature": 6,
+      "radiatorStatus": "off",
+      "isScheduleActive": false,
+      "isTurnedOff": false,
+      "isWindowOpen": false,
+      "isWindowOpenDetectionEnabled": true
+    },
+    {
+      "id": "2_wohnzimmer",
+      "roomGroupId": "DunderMifflinScranton",
+      "displayName": "",
+      "floorLevel": "",
+      "usageType": "LIVING_ROOM",
+      "averageTemperature": 23.0,
+      "averageHumidity": 40.0,
+      "maximumTargetTemperature": 23.0,
+      "maximumTemperature": 28,
+      "minimumTemperature": 6,
+      "radiatorStatus": "hot",
+      "isScheduleActive": true,
+      "isTurnedOff": false,
+      "isWindowOpen": true,
+      "isWindowOpenDetectionEnabled": true
+    },
+    {
+      "id": "3_schlafzimmer",
+      "roomGroupId": "DunderMifflinScranton",
+      "displayName": "",
+      "floorLevel": "",
+      "usageType": "BEDROOM",
+      "averageTemperature": 19.0,
+      "averageHumidity": 35.0,
+      "maximumTargetTemperature": 19.0,
+      "maximumTemperature": 28,
+      "minimumTemperature": 6,
+      "radiatorStatus": "off",
+      "isScheduleActive": false,
+      "isTurnedOff": true,
+      "isWindowOpen": false,
+      "isWindowOpenDetectionEnabled": false
+    }
+  ],
+  "devices": [
+    {
+      "serial": "VA0123456789",
+      "thingId": "io.beyonnex.connect:eui70b3d52dd3002171",
+      "roomId": "1_badezimmer",
+      "manufacturer": "MClimate",
+      "displayName": "io.beyonnex.connect:eui70b3d52dd3002171",
+      "type": "SMART_RADIATOR_THERMOSTAT",
+      "temperature": 22.0,
+      "targetTemperature": 23.0,
+      "humidity": 56.0,
+      "battery": 87.0,
+      "childLock": false
+    },
+    {
+      "serial": "VA9876543210",
+      "thingId": "io.beyonnex.connect:eui70b3d52dd3002172",
+      "roomId": "2_wohnzimmer",
+      "manufacturer": "MClimate",
+      "displayName": "io.beyonnex.connect:eui70b3d52dd3002172",
+      "type": "SMART_RADIATOR_THERMOSTAT",
+      "temperature": 21.5,
+      "targetTemperature": 24.0,
+      "humidity": 60.0,
+      "battery": 0.0,
+      "childLock": true
+    },
+    {
+      "serial": "GW0000000001",
+      "thingId": "io.beyonnex.connect:eui70b3d52dd30021ff",
+      "roomId": null,
+      "manufacturer": "Kerlink",
+      "displayName": "io.beyonnex.connect:eui70b3d52dd30021ff",
+      "type": "LORAWAN_GATEWAY"
+    }
+  ]
+}
