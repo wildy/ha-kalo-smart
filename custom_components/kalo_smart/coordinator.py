@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
+from collections.abc import Mapping
 from dataclasses import dataclass, field
+from datetime import timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -22,12 +26,14 @@ from .api import (
 from .const import (
     DEFAULT_MAX_TEMP,
     DEFAULT_MIN_TEMP,
+    DEFAULT_SCAN_INTERVAL,
     DEVICE_TYPE_THERMOSTAT,
     DOMAIN,
+    MAX_SCAN_INTERVAL,
+    MIN_SCAN_INTERVAL,
     PROFILE_AWAY,
     RADIATOR_STATUS_ACTIVE,
     ROOM_USAGE_NAMES,
-    UPDATE_INTERVAL,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -227,6 +233,26 @@ class KaloSmartData:
     devices: dict[str, KaloDevice] = field(default_factory=dict)
 
 
+def resolve_scan_interval(options: Mapping[str, Any]) -> timedelta:
+    """Pick the poll interval from a config entry's options.
+
+    A value stored by an older version, or hand-edited in .storage, is clamped
+    rather than trusted: a zero would busy-loop the coordinator.
+    """
+    raw = options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+    try:
+        seconds = float(raw)
+    except (TypeError, ValueError):
+        seconds = float(DEFAULT_SCAN_INTERVAL)
+    # int() raises OverflowError on an infinity and ValueError on a nan, and
+    # neither is worth distinguishing from any other unusable value.
+    if not math.isfinite(seconds):
+        seconds = float(DEFAULT_SCAN_INTERVAL)
+    return timedelta(
+        seconds=min(max(int(seconds), MIN_SCAN_INTERVAL), MAX_SCAN_INTERVAL)
+    )
+
+
 def build_data(
     homes_raw: list[dict[str, Any]],
     rooms_raw: list[dict[str, Any]],
@@ -283,7 +309,7 @@ class KaloSmartCoordinator(DataUpdateCoordinator[KaloSmartData]):
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=UPDATE_INTERVAL,
+            update_interval=resolve_scan_interval(entry.options),
             config_entry=entry,
         )
         self.client = client

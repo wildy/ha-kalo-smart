@@ -20,6 +20,7 @@ from aiohttp import ClientResponseError
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from homeassistant.components.climate import HVACAction, HVACMode
+from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.util import dt as dt_util
 
 from custom_components.kalo_smart.api import (
@@ -34,7 +35,7 @@ from custom_components.kalo_smart.climate import (
     KaloSmartClimate,
     _Pending,
 )
-from custom_components.kalo_smart.coordinator import build_data
+from custom_components.kalo_smart.coordinator import build_data, resolve_scan_interval
 
 FIXTURES = json.loads((Path(__file__).parent / "fixtures" / "api_payloads.json").read_text())
 
@@ -405,3 +406,64 @@ async def test_429_retries_only_once(no_sleep):
 
     assert session.calls == 2
     assert no_sleep == [1.0]
+
+
+# -- poll interval ----------------------------------------------------------
+
+
+def test_scan_interval_defaults_to_the_app_cadence():
+    """With nothing configured, poll as often as the app itself does."""
+    assert resolve_scan_interval({}) == timedelta(seconds=60)
+
+
+@pytest.mark.parametrize(
+    ("stored", "expected_seconds"),
+    [
+        (120, 120),
+        (30, 30),
+        (3600, 3600),
+        (90.7, 90),        # the number selector hands back a float
+        ("90", 90),        # options survive a round trip through .storage
+    ],
+)
+def test_scan_interval_uses_the_configured_value(stored, expected_seconds):
+    """A sane configured value is taken as-is."""
+    got = resolve_scan_interval({CONF_SCAN_INTERVAL: stored})
+    assert got == timedelta(seconds=expected_seconds)
+
+
+@pytest.mark.parametrize(
+    ("stored", "expected_seconds"),
+    [
+        (0, 30),           # a zero would busy-loop the coordinator
+        (5, 30),
+        (-60, 30),
+        (99999, 3600),
+    ],
+)
+def test_scan_interval_is_clamped(stored, expected_seconds):
+    """Values outside the allowed range are clamped, never trusted."""
+    assert resolve_scan_interval({CONF_SCAN_INTERVAL: stored}) == timedelta(
+        seconds=expected_seconds
+    )
+
+
+@pytest.mark.parametrize(
+    "stored",
+    [
+        None,
+        "",
+        "abc",
+        [60],
+        # int() raises OverflowError on these, not ValueError, so they used to
+        # escape the guard and stop the integration from loading at all.
+        "inf",
+        "Infinity",
+        "-inf",
+        float("inf"),
+        "nan",
+    ],
+)
+def test_scan_interval_falls_back_on_junk(stored):
+    """Anything unparseable falls back to the default rather than raising."""
+    assert resolve_scan_interval({CONF_SCAN_INTERVAL: stored}) == timedelta(seconds=60)

@@ -108,7 +108,9 @@ def _parse_retry_after(value: str | None) -> float | None:
 
     try:
         when = parsedate_to_datetime(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
+        # Older CPython lets an oversized year reach the datetime constructor,
+        # which raises OverflowError rather than ValueError.
         return None
     if when.tzinfo is None:
         when = when.replace(tzinfo=UTC)
@@ -279,7 +281,8 @@ class KaloSmartApiClient:
         except ClientError as err:
             raise KaloSmartConnectionError(f"Error calling {url}: {err}") from err
 
-        wait_for: float | None = None
+        # Only read on the 429 path, where the branch below always sets it.
+        wait_for: float = DEFAULT_RETRY_AFTER
 
         async with response:
             if response.status in _AUTH_STATUSES:
@@ -318,7 +321,7 @@ class KaloSmartApiClient:
             )
 
         _LOGGER.debug("Rate limited by %s, waiting %.1fs before one retry", url, wait_for)
-        await asyncio.sleep(wait_for if wait_for is not None else DEFAULT_RETRY_AFTER)
+        await asyncio.sleep(wait_for)
         return await self._request(
             method,
             url,

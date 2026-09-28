@@ -32,6 +32,20 @@
       "reauth_successful": "KALO Smart wurde erfolgreich neu angemeldet."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "KALO Smart Optionen",
+        "description": "Die Thermostate werden über LoRaWAN erreicht, daher erfährt auch der Server neue Werte nur alle paar Minuten. Häufigeres Abfragen als der Standardwert bringt wenig.",
+        "data": {
+          "scan_interval": "Aktualisierungsintervall"
+        },
+        "data_description": {
+          "scan_interval": "Wie oft der KALO Smart Dienst abgefragt wird, in Sekunden. Die App selbst nutzt 60."
+        }
+      }
+    }
+  },
   "entity": {
     "binary_sensor": {
       "window_open": {

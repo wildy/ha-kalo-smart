@@ -32,6 +32,20 @@
       "reauth_successful": "KALO Smart was re-authenticated successfully."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "KALO Smart options",
+        "description": "The thermostats are reached over LoRaWAN, so the backend itself only learns new values every few minutes. Polling faster than the default gains little.",
+        "data": {
+          "scan_interval": "Update interval"
+        },
+        "data_description": {
+          "scan_interval": "How often to poll the KALO Smart service, in seconds. The app itself uses 60."
+        }
+      }
+    }
+  },
   "entity": {
     "binary_sensor": {
       "window_open": {

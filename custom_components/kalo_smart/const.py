@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import Final
 
 DOMAIN: Final = "kalo_smart"
@@ -20,8 +19,13 @@ COGNITO_CLIENT_ID: Final = "7r3k7jf5a5eg23cu275ha3vbi5"
 APP_VERSION: Final = "1.7.3"
 
 # The app itself polls once a minute. Commands travel over LoRaWAN, so state
-# changes take minutes to show up regardless; polling faster only adds load.
-UPDATE_INTERVAL: Final = timedelta(seconds=60)
+# changes take minutes to show up regardless; polling faster only adds load,
+# which is why the default matches the app rather than beating it.
+DEFAULT_SCAN_INTERVAL: Final = 60
+# Below the default there is nothing to gain, but a little room is allowed.
+# Above an hour the integration stops being useful as a live view.
+MIN_SCAN_INTERVAL: Final = 30
+MAX_SCAN_INTERVAL: Final = 3600
 
 # --- Room state ------------------------------------------------------------
 ATTR_RADIATOR_STATUS: Final = "radiator_status"
