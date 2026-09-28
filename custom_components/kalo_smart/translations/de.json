@@ -24,11 +24,26 @@
       "cannot_connect": "Der KALO Smart Dienst ist nicht erreichbar.",
       "invalid_auth": "Ungültige E-Mail-Adresse oder ungültiges Passwort.",
       "no_rooms": "Anmeldung erfolgreich, aber dieses Konto hat keine Räume mit Thermostaten.",
+      "rate_limited": "Zu viele Anfragen an den KALO Smart Dienst. Bitte einen Moment warten und erneut versuchen.",
       "unknown": "Unerwarteter Fehler."
     },
     "abort": {
       "already_configured": "Dieses Konto ist bereits eingerichtet.",
       "reauth_successful": "KALO Smart wurde erfolgreich neu angemeldet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "KALO Smart Optionen",
+        "description": "Die Thermostate werden über LoRaWAN erreicht, daher erfährt auch der Server neue Werte nur alle paar Minuten. Häufigeres Abfragen als der Standardwert bringt wenig.",
+        "data": {
+          "scan_interval": "Aktualisierungsintervall"
+        },
+        "data_description": {
+          "scan_interval": "Wie oft der KALO Smart Dienst abgefragt wird, in Sekunden. Die App selbst nutzt 60."
+        }
+      }
     }
   },
   "entity": {

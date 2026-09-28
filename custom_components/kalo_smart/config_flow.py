@@ -8,17 +8,34 @@ from typing import Any
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlowWithReload,
+)
+from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_SCAN_INTERVAL
+from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.selector import (
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
+)
 
 from .api import (
     KaloSmartApiClient,
     KaloSmartAuthError,
     KaloSmartConnectionError,
     KaloSmartError,
+    KaloSmartRateLimitError,
 )
-from .const import DOMAIN
+from .const import (
+    DOMAIN,
+    MAX_SCAN_INTERVAL,
+    MIN_SCAN_INTERVAL,
+)
+from .coordinator import resolve_scan_interval
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,6 +54,12 @@ class KaloSmartConfigFlow(ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> KaloSmartOptionsFlow:
+        """Return the options flow for this entry."""
+        return KaloSmartOptionsFlow()
+
     async def _async_validate(self, email: str, password: str) -> dict[str, str]:
         """Try the credentials and confirm the account has something to control.
 
@@ -52,6 +75,8 @@ class KaloSmartConfigFlow(ConfigFlow, domain=DOMAIN):
             return {"base": "invalid_auth"}
         except KaloSmartConnectionError:
             return {"base": "cannot_connect"}
+        except KaloSmartRateLimitError:
+            return {"base": "rate_limited"}
         except KaloSmartError:
             _LOGGER.exception("Unexpected error validating KALO Smart credentials")
             return {"base": "unknown"}
@@ -109,4 +134,42 @@ class KaloSmartConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=STEP_REAUTH_SCHEMA,
             description_placeholders={CONF_EMAIL: entry.data[CONF_EMAIL]},
             errors=errors,
+        )
+
+
+class KaloSmartOptionsFlow(OptionsFlowWithReload):
+    """Let the user choose how often the backend is polled.
+
+    Reloading on save is handled by OptionsFlowWithReload, so the integration
+    registers no update listener of its own.
+    """
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Show and store the poll interval."""
+        if user_input is not None:
+            # The number selector hands back a float.
+            return self.async_create_entry(
+                data={CONF_SCAN_INTERVAL: int(user_input[CONF_SCAN_INTERVAL])}
+            )
+
+        # Go through the same resolver the coordinator uses, so the form never
+        # offers a value the selector's own bounds would reject.
+        current = int(resolve_scan_interval(self.config_entry.options).total_seconds())
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_SCAN_INTERVAL, default=current): NumberSelector(
+                        NumberSelectorConfig(
+                            min=MIN_SCAN_INTERVAL,
+                            max=MAX_SCAN_INTERVAL,
+                            step=10,
+                            unit_of_measurement="seconds",
+                            mode=NumberSelectorMode.BOX,
+                        )
+                    )
+                }
+            ),
         )

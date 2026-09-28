@@ -24,11 +24,26 @@
       "cannot_connect": "Could not reach the KALO Smart service.",
       "invalid_auth": "Invalid email or password.",
       "no_rooms": "Signed in, but this account has no rooms with thermostats.",
+      "rate_limited": "Too many requests to the KALO Smart service. Wait a moment and try again.",
       "unknown": "Unexpected error."
     },
     "abort": {
       "already_configured": "This account is already set up.",
       "reauth_successful": "KALO Smart was re-authenticated successfully."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "KALO Smart options",
+        "description": "The thermostats are reached over LoRaWAN, so the backend itself only learns new values every few minutes. Polling faster than the default gains little.",
+        "data": {
+          "scan_interval": "Update interval"
+        },
+        "data_description": {
+          "scan_interval": "How often to poll the KALO Smart service, in seconds. The app itself uses 60."
+        }
+      }
     }
   },
   "entity": {

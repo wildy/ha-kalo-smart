@@ -80,6 +80,19 @@ Sign in with the email and password you use in the KALO Smart app. Accounts that
 sign in through Google or Apple, or that have MFA enabled, are **not supported**
 — the integration authenticates directly against Cognito with a password.
 
+### Options
+
+*Configure* on the integration exposes one setting:
+
+| Option | Default | Range |
+| --- | --- | --- |
+| Update interval | 60 s | 30 s – 1 h |
+
+The default matches the app. Because readings travel over LoRaWAN and only
+reach the backend every few minutes, polling faster buys almost nothing, while
+raising it to a few minutes cuts requests with little loss of freshness.
+Saving reloads the integration.
+
 ## Checking it against your own account
 
 Before trusting the integration, you can confirm the endpoints behave the way
