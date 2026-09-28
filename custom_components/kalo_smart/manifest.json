@@ -8,5 +8,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/wildy/ha-kalo-smart/issues",
   "requirements": ["pycognito==2024.5.1"],
-  "version": "0.1.0"
+  "version": "0.1.1"
 }
