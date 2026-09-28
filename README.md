@@ -118,13 +118,14 @@ The app is Ionic/Angular under Capacitor and ships source maps with
 
 ## Status
 
-Built from a complete read of the app's own source. Verified by unit tests and
-by importing cleanly against Home Assistant 2026.9; the 2025.3 floor was checked
-symbol by symbol against that release's source rather than assumed. **Not yet
-verified against a live account** — if something does not match, the probe script's output is the
-most useful thing to attach to an issue.
+Built from a complete read of the app's own source. **Running against a live
+account**, installed through HACS. Also covered by unit tests, and the 2025.3
+floor was checked symbol by symbol against that release's source rather than
+assumed.
 
-Known unknowns, all flagged where they matter in the code:
+Two details were never settled from the app's source alone, and both are still
+guesses unless your own installation says otherwise. If one looks wrong, the
+probe script's output is the most useful thing to attach to an issue:
 
 - Whether `{"mode": ""}` is the right way to turn a room back on, or whether
   writing a setpoint alone suffices.
