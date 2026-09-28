@@ -71,6 +71,9 @@ Add this repository as a custom repository of type *Integration*, install
 Copy `custom_components/kalo_smart` into your `config/custom_components/` and
 restart Home Assistant.
 
+Requires **Home Assistant 2025.3 or newer** — that is the release that
+introduced `AddConfigEntryEntitiesCallback`, which the platforms are built on.
+
 ## Configuration
 
 Sign in with the email and password you use in the KALO Smart app. Accounts that
@@ -116,8 +119,9 @@ The app is Ionic/Angular under Capacitor and ships source maps with
 ## Status
 
 Built from a complete read of the app's own source. Verified by unit tests and
-by importing cleanly against Home Assistant 2026.9. **Not yet verified against a
-live account** — if something does not match, the probe script's output is the
+by importing cleanly against Home Assistant 2026.9; the 2025.3 floor was checked
+symbol by symbol against that release's source rather than assumed. **Not yet
+verified against a live account** — if something does not match, the probe script's output is the
 most useful thing to attach to an issue.
 
 Known unknowns, all flagged where they matter in the code:
