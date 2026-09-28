@@ -17,6 +17,7 @@ from .api import (
     KaloSmartAuthError,
     KaloSmartConnectionError,
     KaloSmartError,
+    KaloSmartRateLimitError,
 )
 from .const import DOMAIN
 
@@ -52,6 +53,8 @@ class KaloSmartConfigFlow(ConfigFlow, domain=DOMAIN):
             return {"base": "invalid_auth"}
         except KaloSmartConnectionError:
             return {"base": "cannot_connect"}
+        except KaloSmartRateLimitError:
+            return {"base": "rate_limited"}
         except KaloSmartError:
             _LOGGER.exception("Unexpected error validating KALO Smart credentials")
             return {"base": "unknown"}

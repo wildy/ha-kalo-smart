@@ -6,20 +6,29 @@ tests pin down the mapping from the backend's vocabulary to Home Assistant's.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import sys
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
+from email.utils import format_datetime
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from aiohttp import ClientResponseError
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from homeassistant.components.climate import HVACAction, HVACMode
 from homeassistant.util import dt as dt_util
 
-from custom_components.kalo_smart.api import device_eui
+from custom_components.kalo_smart.api import (
+    DEFAULT_RETRY_AFTER,
+    KaloSmartApiClient,
+    KaloSmartRateLimitError,
+    _parse_retry_after,
+    device_eui,
+)
 from custom_components.kalo_smart.climate import (
     PENDING_TIMEOUT,
     KaloSmartClimate,
@@ -252,3 +261,147 @@ def test_pending_value_wins_until_confirmed(data):
     entity._pending_temperature = _Pending(25.0, dt_util.utcnow() - timedelta(seconds=1))
     entity._handle_coordinator_update = lambda: None  # no hass to write state to
     assert entity._pending_temperature.expired
+
+
+# -- Retry-After parsing ----------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("header", "expected"),
+    [
+        ("5", 5.0),
+        ("0", 0.0),
+        ("5.5", 5.5),
+        ("  10  ", 10.0),
+        ("-3", 0.0),          # clamped; never wait a negative time
+        (None, None),
+        ("", None),
+        ("later", None),
+        ("nan", None),        # float() accepts these, we must not
+        ("inf", None),
+    ],
+)
+def test_parse_retry_after_seconds(header, expected):
+    """RFC 9110 allows a plain delay in seconds."""
+    assert _parse_retry_after(header) == expected
+
+
+def test_parse_retry_after_http_date_in_future():
+    """The other RFC 9110 form is an HTTP date."""
+    when = datetime.now(UTC) + timedelta(seconds=120)
+    parsed = _parse_retry_after(format_datetime(when, usegmt=True))
+    assert parsed is not None
+    assert 115 <= parsed <= 121
+
+
+def test_parse_retry_after_http_date_in_past_is_zero():
+    """A date that already passed means we may go straight away."""
+    when = datetime.now(UTC) - timedelta(hours=1)
+    assert _parse_retry_after(format_datetime(when, usegmt=True)) == 0.0
+
+
+# -- 429 handling -----------------------------------------------------------
+
+
+class _FakeResponse:
+    """Minimal stand-in for an aiohttp response."""
+
+    def __init__(self, status, headers=None, body=""):
+        self.status = status
+        self.headers = headers or {}
+        self._body = body
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+    def raise_for_status(self):
+        if self.status >= 400:
+            raise ClientResponseError(None, (), status=self.status)
+
+    async def text(self):
+        return self._body
+
+
+class _FakeSession:
+    """Hands out queued responses and records how many requests were made."""
+
+    def __init__(self, responses):
+        self._responses = list(responses)
+        self.calls = 0
+
+    async def request(self, *args, **kwargs):
+        self.calls += 1
+        return self._responses.pop(0)
+
+
+def _client(session):
+    client = KaloSmartApiClient(session, "a@b.c", "pw")
+    client._access_token = "token"
+    return client
+
+
+@pytest.fixture
+def no_sleep(monkeypatch):
+    """Record sleeps instead of actually waiting."""
+    slept = []
+
+    async def fake_sleep(seconds):
+        slept.append(seconds)
+
+    monkeypatch.setattr(asyncio, "sleep", fake_sleep)
+    return slept
+
+
+async def test_429_waits_the_requested_time_then_retries(no_sleep):
+    """A short Retry-After is honoured and the call is retried once."""
+    session = _FakeSession(
+        [
+            _FakeResponse(429, {"Retry-After": "2"}),
+            _FakeResponse(200, {"Content-Type": "application/json"}, '{"ok": true}'),
+        ]
+    )
+    result = await _client(session)._request("GET", "https://example.test/x")
+
+    assert result == {"ok": True}
+    assert session.calls == 2
+    assert no_sleep == [2.0]
+
+
+async def test_429_without_header_uses_the_default_pause(no_sleep):
+    """Some backends send no Retry-After; fall back rather than hammering."""
+    session = _FakeSession(
+        [
+            _FakeResponse(429),
+            _FakeResponse(200, {"Content-Type": "application/json"}, "[]"),
+        ]
+    )
+    assert await _client(session)._request("GET", "https://example.test/x") == []
+    assert no_sleep == [DEFAULT_RETRY_AFTER]
+
+
+async def test_429_with_a_long_wait_raises_instead_of_blocking(no_sleep):
+    """Waiting out a long pause inside one update is worse than failing."""
+    session = _FakeSession([_FakeResponse(429, {"Retry-After": "600"})])
+    client = _client(session)
+
+    with pytest.raises(KaloSmartRateLimitError) as err:
+        await client._request("GET", "https://example.test/x")
+
+    assert err.value.retry_after == 600.0
+    assert session.calls == 1
+    assert no_sleep == []
+
+
+async def test_429_retries_only_once(no_sleep):
+    """A backend that keeps saying 429 must not loop forever."""
+    session = _FakeSession(
+        [_FakeResponse(429, {"Retry-After": "1"}), _FakeResponse(429, {"Retry-After": "1"})]
+    )
+    with pytest.raises(KaloSmartRateLimitError):
+        await _client(session)._request("GET", "https://example.test/x")
+
+    assert session.calls == 2
+    assert no_sleep == [1.0]

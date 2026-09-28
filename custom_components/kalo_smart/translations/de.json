@@ -24,6 +24,7 @@
       "cannot_connect": "Der KALO Smart Dienst ist nicht erreichbar.",
       "invalid_auth": "Ungültige E-Mail-Adresse oder ungültiges Passwort.",
       "no_rooms": "Anmeldung erfolgreich, aber dieses Konto hat keine Räume mit Thermostaten.",
+      "rate_limited": "Zu viele Anfragen an den KALO Smart Dienst. Bitte einen Moment warten und erneut versuchen.",
       "unknown": "Unerwarteter Fehler."
     },
     "abort": {

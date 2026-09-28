@@ -8,7 +8,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 import re
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from http import HTTPStatus
 from json import loads as json_loads
 from typing import Any
@@ -32,6 +35,13 @@ REQUEST_TIMEOUT = ClientTimeout(total=30)
 # A rejected token looks like either of these, depending on the service.
 _AUTH_STATUSES = frozenset({HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN})
 
+# How long to pause when a 429 arrives without a Retry-After header.
+DEFAULT_RETRY_AFTER = 5.0
+# Beyond this, waiting inside a single update is not worth it: the
+# coordinator polls again on its own schedule, and a user-triggered write
+# should fail visibly rather than hang.
+MAX_RETRY_AFTER_WAIT = 30.0
+
 
 class KaloSmartError(Exception):
     """Base error for this client."""
@@ -43,6 +53,67 @@ class KaloSmartAuthError(KaloSmartError):
 
 class KaloSmartConnectionError(KaloSmartError):
     """The backend could not be reached."""
+
+
+class KaloSmartRateLimitError(KaloSmartError):
+    """The backend asked us to slow down."""
+
+    def __init__(self, message: str, retry_after: float | None = None) -> None:
+        """Keep how long the backend asked us to wait, for the caller to log."""
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
+async def _decode(response: Any, method: str, url: str) -> Any:
+    """Turn a successful response into the value the caller expects."""
+    try:
+        response.raise_for_status()
+    except ClientResponseError as err:
+        body = await response.text()
+        raise KaloSmartError(
+            f"{method} {url} failed with {response.status}: {body[:200]}"
+        ) from err
+
+    if response.status == HTTPStatus.NO_CONTENT:
+        return None
+
+    # Several write endpoints answer 200 with an empty body, and a few reads
+    # answer with a bare string rather than JSON, so decode from the text
+    # instead of trusting Content-Length.
+    body = await response.text()
+    if not body:
+        return None
+    if "application/json" in (response.headers.get("Content-Type") or ""):
+        return json_loads(body)
+    return body
+
+
+def _parse_retry_after(value: str | None) -> float | None:
+    """Parse a Retry-After header into seconds, or None if it is unusable.
+
+    RFC 9110 allows either a delay in seconds or an HTTP date, and both
+    forms turn up in the wild.
+    """
+    if not value:
+        return None
+    value = value.strip()
+
+    try:
+        seconds = float(value)
+    except ValueError:
+        pass
+    else:
+        # Reject nan/inf, which float() otherwise accepts.
+        return max(seconds, 0.0) if math.isfinite(seconds) else None
+
+    try:
+        when = parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return None
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=UTC)
+    # A date already in the past means "go ahead now".
+    return max((when - datetime.now(UTC)).total_seconds(), 0.0)
 
 
 class KaloSmartApiClient:
@@ -178,9 +249,14 @@ class KaloSmartApiClient:
         url: str,
         *,
         json: Any = None,
-        _retry: bool = True,
+        _auth_retry: bool = True,
+        _rate_limit_retry: bool = True,
     ) -> Any:
-        """Send one authenticated request, renewing the token on a 401."""
+        """Send one authenticated request.
+
+        Renews the token once on a 401/403, and waits out a 429 once when the
+        backend asks for a short enough pause.
+        """
         if self._access_token is None:
             await self.async_login()
 
@@ -203,35 +279,53 @@ class KaloSmartApiClient:
         except ClientError as err:
             raise KaloSmartConnectionError(f"Error calling {url}: {err}") from err
 
+        wait_for: float | None = None
+
         async with response:
-            if response.status in _AUTH_STATUSES and _retry:
-                _LOGGER.debug("Got %s from %s, renewing token", response.status, url)
-                await self._async_reauthenticate()
-                return await self._request(method, url, json=json, _retry=False)
-
             if response.status in _AUTH_STATUSES:
-                raise KaloSmartAuthError(f"Not authorised for {url}")
+                if not _auth_retry:
+                    raise KaloSmartAuthError(f"Not authorised for {url}")
+                # Renewed below, once the connection is released.
 
-            try:
-                response.raise_for_status()
-            except ClientResponseError as err:
-                body = await response.text()
-                raise KaloSmartError(
-                    f"{method} {url} failed with {response.status}: {body[:200]}"
-                ) from err
+            elif response.status == HTTPStatus.TOO_MANY_REQUESTS:
+                retry_after = _parse_retry_after(response.headers.get("Retry-After"))
+                wait_for = DEFAULT_RETRY_AFTER if retry_after is None else retry_after
+                if not _rate_limit_retry or wait_for > MAX_RETRY_AFTER_WAIT:
+                    raise KaloSmartRateLimitError(
+                        f"{method} {url} was rate limited"
+                        + (
+                            f"; backend asked to retry after {retry_after:.0f}s"
+                            if retry_after is not None
+                            else " without a Retry-After header"
+                        ),
+                        retry_after=retry_after,
+                    )
 
-            if response.status == HTTPStatus.NO_CONTENT:
-                return None
+            else:
+                return await _decode(response, method, url)
 
-            # Several write endpoints answer 200 with an empty body, and a few
-            # reads answer with a bare string rather than JSON, so decode from
-            # the text instead of trusting Content-Length.
-            body = await response.text()
-            if not body:
-                return None
-            if "application/json" in (response.headers.get("Content-Type") or ""):
-                return json_loads(body)
-            return body
+        # Both retries happen out here, so the connection is back in the pool
+        # rather than held open across a renewal or a Retry-After pause.
+        if response.status in _AUTH_STATUSES:
+            _LOGGER.debug("Got %s from %s, renewing token", response.status, url)
+            await self._async_reauthenticate()
+            return await self._request(
+                method,
+                url,
+                json=json,
+                _auth_retry=False,
+                _rate_limit_retry=_rate_limit_retry,
+            )
+
+        _LOGGER.debug("Rate limited by %s, waiting %.1fs before one retry", url, wait_for)
+        await asyncio.sleep(wait_for if wait_for is not None else DEFAULT_RETRY_AFTER)
+        return await self._request(
+            method,
+            url,
+            json=json,
+            _auth_retry=_auth_retry,
+            _rate_limit_retry=False,
+        )
 
     # -- reads --------------------------------------------------------------
 

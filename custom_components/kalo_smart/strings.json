@@ -24,6 +24,7 @@
       "cannot_connect": "Could not reach the KALO Smart service.",
       "invalid_auth": "Invalid email or password.",
       "no_rooms": "Signed in, but this account has no rooms with thermostats.",
+      "rate_limited": "Too many requests to the KALO Smart service. Wait a moment and try again.",
       "unknown": "Unexpected error."
     },
     "abort": {

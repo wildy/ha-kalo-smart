@@ -9,13 +9,14 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import (
     KaloSmartApiClient,
     KaloSmartAuthError,
     KaloSmartError,
+    KaloSmartRateLimitError,
     device_eui,
 )
 from .const import (
@@ -333,10 +334,20 @@ class KaloSmartCoordinator(DataUpdateCoordinator[KaloSmartData]):
         refresh that follows usually still reports the old value. Entities
         write their new value optimistically and let the next poll correct it.
         """
+        pending = list(calls)
         try:
-            for call in calls:
-                await call
+            while pending:
+                await pending.pop(0)
         except KaloSmartAuthError as err:
             raise ConfigEntryAuthFailed(str(err)) from err
+        except KaloSmartRateLimitError as err:
+            raise HomeAssistantError(
+                "KALO Smart is rate limiting requests right now; try again shortly"
+            ) from err
+        finally:
+            # Whatever we never got to must be closed, or Python warns about a
+            # coroutine that was never awaited.
+            for call in pending:
+                call.close()
 
         await self.async_request_refresh()
